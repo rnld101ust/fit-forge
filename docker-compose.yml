@@ -1,0 +1,142 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FitForge — Local Docker Compose
+# All services communicate via Docker's internal DNS (service name = hostname)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Data stores ──────────────────────────────────────────────────────────────
+
+  mongo:
+    image: mongo:6.0
+    container_name: fitforge-mongo
+    # No host port binding — only reachable inside fitforge-net
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: fitforge-redis
+    # No host port binding — only reachable inside fitforge-net
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  # ── Backend microservices ─────────────────────────────────────────────────────
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: fitforge-auth
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb://mongo:27017/auth_db
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongo
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  user-service:
+    build: ./services/user-service
+    container_name: fitforge-user
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb://mongo:27017/user_db
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongo
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  workout-service:
+    build: ./services/workout-service
+    container_name: fitforge-workout
+    environment:
+      - PORT=5003
+      - MONGO_URI=mongodb://mongo:27017/workout_db
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongo
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  nutrition-service:
+    build: ./services/nutrition-service
+    container_name: fitforge-nutrition
+    environment:
+      - PORT=5004
+      - MONGO_URI=mongodb://mongo:27017/nutrition_db
+    depends_on:
+      - mongo
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  progress-service:
+    build: ./services/progress-service
+    container_name: fitforge-progress
+    environment:
+      - PORT=5005
+      - MONGO_URI=mongodb://mongo:27017/progress_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+
+  aggregator-service:
+    build: ./services/aggregator-service
+    container_name: fitforge-aggregator
+    # No host port binding — API only reachable via nginx inside fitforge-net
+    environment:
+      - PORT=4000
+      - AUTH_URL=http://auth-service:5001
+      - USER_URL=http://user-service:5002
+      - WORKOUT_URL=http://workout-service:5003
+      - NUTRITION_URL=http://nutrition-service:5004
+      - PROGRESS_URL=http://progress-service:5005
+    depends_on:
+      - auth-service
+      - user-service
+      - workout-service
+      - nutrition-service
+      - progress-service
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+  # ── Frontend ──────────────────────────────────────────────────────────────────
+
+  frontend:
+    build: ./frontend
+    container_name: fitforge-frontend
+    ports:
+      - "80:3000"     # Only public-facing port — nginx serves React + proxies /api
+    depends_on:
+      - aggregator-service
+    networks:
+      - fitforge-net
+    restart: unless-stopped
+
+# ── Volumes & Networks ────────────────────────────────────────────────────────
+
+volumes:
+  mongo_data:
+    # K8s equivalent: PersistentVolume + PVC mounted to MongoDB StatefulSet
+
+networks:
+  fitforge-net:
+    driver: bridge
+    # K8s equivalent: ClusterIP services + namespace DNS

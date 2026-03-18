@@ -1,0 +1,24 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Workout from './pages/Workout';
+import Nutrition from './pages/Nutrition';
+import Progress from './pages/Progress';
+
+function PrivateRoute({ children }) {
+  return localStorage.getItem('token') ? children : <Navigate to="/login" />;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/workout" element={<PrivateRoute><Workout /></PrivateRoute>} />
+        <Route path="/nutrition" element={<PrivateRoute><Nutrition /></PrivateRoute>} />
+        <Route path="/progress" element={<PrivateRoute><Progress /></PrivateRoute>} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
