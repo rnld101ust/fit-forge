@@ -14,8 +14,13 @@ import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-MODEL_NAME = os.getenv("LLM_MODEL", "gemini-2.5-flash-lite")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+MODEL_NAME     = os.environ.get("LLM_MODEL")
+
+if not GOOGLE_API_KEY:
+    raise RuntimeError("GOOGLE_API_KEY environment variable is required but not set")
+if not MODEL_NAME:
+    raise RuntimeError("LLM_MODEL environment variable is required but not set")
 
 _SYSTEM_TEMPLATE = """\
 You are FitBot, a helpful and encouraging personal fitness assistant for the FitForge platform.

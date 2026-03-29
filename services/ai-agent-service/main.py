@@ -15,9 +15,13 @@ Auth flow:
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, Header
+from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ai-agent-service")
 
 from auth import get_current_user
 from data_fetcher import fetch_user_context
@@ -82,15 +86,29 @@ async def chat(
     - Runs LangChain agent with the fetched context
     - Returns the LLM's answer
     """
+    # JWT decoded payload shape: { userId, email } (set by auth-service)
     user_id = current_user.get("userId") or current_user.get("_id", "")
+    logger.info("[chat] userId=%s message=%r", user_id, body.message[:60])
+
+    if not user_id:
+        logger.error("[chat] Could not extract userId from JWT. Payload: %s", current_user)
+        raise HTTPException(status_code=400, detail="Could not resolve userId from token")
 
     # Extract the raw token to forward to data_fetcher
     raw_token = authorization.split(" ", 1)[1] if " " in authorization else authorization
 
-    # Step 1: fetch only this user's data (not the whole DB)
-    user_context = await fetch_user_context(user_id, raw_token)
+    try:
+        # Step 1: fetch only this user's data (not the whole DB)
+        user_context = await fetch_user_context(user_id, raw_token)
+        logger.info("[chat] fetched context: workouts=%d nutrition=%d progress=%d",
+                    len(user_context.get("workout_plans", [])),
+                    len(user_context.get("recent_nutrition", [])),
+                    len(user_context.get("recent_progress", [])))
 
-    # Step 2: ask the LangChain agent
-    reply = await chat_with_agent(body.message, user_context)
+        # Step 2: ask the LangChain agent
+        reply = await chat_with_agent(body.message, user_context)
+        return ChatResponse(reply=reply, user_id=user_id)
 
-    return ChatResponse(reply=reply, user_id=user_id)
+    except Exception as exc:
+        logger.exception("[chat] Unhandled error: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))

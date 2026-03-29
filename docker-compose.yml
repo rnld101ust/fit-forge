@@ -101,11 +101,11 @@ services:
   ai-agent-service:
     build: ./services/ai-agent-service
     container_name: fitforge-ai-agent
+    env_file:
+      - .env                          # LLM_MODEL (and GOOGLE_API_KEY) come from here
     environment:
       - PORT=5006
       - AUTH_SERVICE_URL=http://auth-service:5001
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gemini-2.5-flash-lite}
     depends_on:
       - auth-service
       - workout-service
