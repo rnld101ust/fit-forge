@@ -1,6 +1,9 @@
 # Environment secrets — NEVER commit
 .env
 
+# Kubernetes plaintext secrets (kubeseal input) — NEVER commit
+k8s/mongo/mongodb-secret.yaml
+
 # Node
 node_modules/
 npm-debug.log*
