@@ -16,12 +16,13 @@ architecture: replicaset
 replicaCount: 3
 
 # ── Image ────────────────────────────────────────────────────────────────────
-# Pin the image tag for reproducible deployments.
-image:
-  registry: docker.io
-  repository: bitnami/mongodb
-  tag: "7.0"
-  pullPolicy: IfNotPresent
+# By default, the chart uses the perfectly matched Bitnami MongoDB tag 
+# (e.g. 7.0.x-debian-12-rX). Do NOT override with just "7.0" as it doesn't exist.
+# image:
+#   registry: docker.io
+#   repository: bitnami/mongodb
+#   tag: "7.0"
+#   pullPolicy: IfNotPresent
 
 # ── Authentication ───────────────────────────────────────────────────────────
 # All credentials are sourced from a pre-existing Kubernetes Secret managed
