@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nutrition-service
+  labels:
+    app: nutrition-service
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: nutrition-service
+  template:
+    metadata:
+      labels:
+        app: nutrition-service
+    spec:
+      containers:
+        - name: nutrition-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.service.port }}"
+          envFrom:
+            - secretRef:
+              # We expect you to run the local EC2 kubeseal instructions to supply this!
+                name: nutrition-service-secret
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

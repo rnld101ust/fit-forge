@@ -1,9 +1,9 @@
-# Default values for workout-service.
+# Default values for nutrition-service.
 
 replicaCount: 1
 
 image:
-  repository: aswin018/k8s_mern_app_workout-service
+  repository: aswin018/k8s_mern_app_nutrition-service
   pullPolicy: Always
   tag: "v3"
 
@@ -18,7 +18,8 @@ resources:
 
 service:
   type: ClusterIP
-  port: 5003
+  port: 5004
+  targetPort: 5004
 
 autoscaling:
   enabled: true
