@@ -1,11 +1,11 @@
-# Default values for nutrition-service.
+# Default values for ai-agent-service.
 
 replicaCount: 1
 
 image:
-  repository: aswin018/k8s_mern_app_nutrition-service
+  repository: aswin018/k8s_mern_app_ai-agent-service
   pullPolicy: Always
-  tag: "v3"
+  tag: "v5"
 
 # Resources configured for Guaranteed QoS
 resources:
@@ -13,13 +13,13 @@ resources:
     cpu: "50m"
     memory: "128Mi"
   limits:
-    cpu: "300m"
-    memory: "300Mi"
+    cpu: "250m"
+    memory: "256Mi"
 
 service:
   type: ClusterIP
-  port: 5004
-  targetPort: 5004
+  port: 5006
+  targetPort: 5006
 
 autoscaling:
   enabled: true
@@ -27,4 +27,3 @@ autoscaling:
   maxReplicas: 5
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 75
-
