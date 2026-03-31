@@ -5,6 +5,7 @@
 k8s/mongo/mongodb-secret.yaml
 pass_gen.txt
 generate.py
+#
 
 # Node
 node_modules/
