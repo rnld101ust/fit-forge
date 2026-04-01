@@ -1,0 +1,44 @@
+mode: deployment
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 500Mi
+
+config:
+  extensions:
+    health_check:
+      endpoint: "0.0.0.0:13133"
+
+  receivers:
+    prometheus:
+      config:
+        scrape_configs:
+          - job_name: 'mongodb-metrics'
+            scrape_interval: 15s
+            static_configs:
+              - targets:
+                - mongodb-0.mongodb-headless.fit-forge.svc.cluster.local:9216
+                - mongodb-1.mongodb-headless.fit-forge.svc.cluster.local:9216
+                - mongodb-2.mongodb-headless.fit-forge.svc.cluster.local:9216
+
+  processors:
+    batch: {}
+
+  exporters:
+    debug:
+      verbosity: normal
+
+  service:
+    extensions: [health_check]
+    pipelines:
+      metrics:
+        receivers: [prometheus]
+        processors: [batch]
+        exporters: [debug]
