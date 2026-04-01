@@ -1,98 +1,114 @@
-# 🏋️ FitForge — MERN + Python Microservices Fitness Platform
+# 🏋️ FitForge — MERN + AI Microservices Fitness Platform
 
-A **learning-focused** microservices application built to practice real-world patterns with a multi-stack architecture (Node.js + Python) and Kubernetes.
+A production-ready microservices application built to practice advanced Kubernetes patterns, multi-stack architecture (Node.js + Python), and full-stack observability. 
 
-## Services
+## 🏗️ Architecture Overview
 
-| Service | Port | Stack | Purpose |
-|---------|------|-------|---------|
-| auth-service | 5001 | Node.js | JWT signup / login / verify |
-| user-service | 5002 | Node.js | User profiles |
-| workout-service | 5003 | Node.js | Workout plans |
-| nutrition-service | 5004 | Node.js | Diet / nutrition logs |
-| progress-service | 5005 | Node.js + Redis | Progress & weight tracking |
-| **ai-agent-service** | **5006** | **Python / FastAPI** | **LangChain chatbot (Gemini)** |
-| frontend | 3000 | React + nginx | SPA — proxies all `/api/*` calls |
+FitForge is deployed on a **kubeadm Kubernetes cluster** (AWS EC2, 3 worker nodes) with a dedicated **HAProxy load balancer EC2 instance** sitting in front.
 
-## Quick Start (Docker Compose — local)
+### Microservices
+| Service | Tech Stack | Port | Purpose |
+|---------|------------|------|---------|
+| `auth-service` | Node.js / Express | 5001 | JWT authentication & verification (`auth_db`) |
+| `user-service` | Node.js / Express | 5002 | User profile management (`user_db`) |
+| `workout-service`| Node.js / Express | 5003 | Workout plans (`workout_db`) |
+| `nutrition-service`| Node.js / Express | 5004 | Diet and meal logs (`nutrition_db`) |
+| `progress-service` | Node.js / Express | 5005 | Progress tracking (`progress_db` + Redis cache) |
+| `ai-agent-service` | Python / FastAPI | 5006 | **LangChain** personalized coaching via Google Gemini |
+| `frontend` | React + Vite | 80 | **Pure Static SPA** (nginx serving HTML/JS/CSS) |
 
-```bash
-# 1. Copy env file and fill in secrets
-cp .env.example .env
-# Edit .env:
-#   JWT_SECRET=<long-random-string>
-#   GOOGLE_API_KEY=<your-google-ai-studio-key>
+### Infrastructure Components
+- **Ingress**: Kubernetes Gateway API via **Envoy Gateway**. HTTPRoutes handle path-prefix routing (`/api/auth/*` → `auth-service`, etc.).
+- **External Load Balancer**: **HAProxy** on a separate EC2 instance, round-robining internet traffic to K8s worker Envoy NodePorts.
+- **Data Stores**:
+  - **MongoDB ReplicaSet** (3 Nodes) deployed via the Bitnami Helm chart. 5 discrete databases for the 5 backend services. Storage backed by an NFS PersistentVolume (`5Gi` per node).
+  - **Redis** (`7.2-alpine`) via Helm, with Horizontal Pod Autoscaling (HPA) enabled for the `progress-service` cache.
+- **Security**: **Sealed Secrets** (kubeseal) encrypts sensitive MongoDB credentials and API keys at rest.
+- **Observability**: **kube-prometheus-stack**. Includes Prometheus, Grafana, Node Exporter (hardware metrics), and kube-state-metrics (K8s object states). MongoDB metrics are exposed via a sidecar and auto-discovered.
 
-# 2. Build and start everything
-docker-compose up --build
+---
 
-# 3. Open the app
-open http://localhost:80
-```
+## 🚀 Quick Start (Local Docker Compose)
 
-## Architecture
-
-See [architecture.md](./architecture.md) for:
-- High-level diagram
-- Kubernetes resource mapping
-- Docker → Kubernetes migration steps
-- Failure scenarios
-- Observability roadmap
-
-## EC2 Deployment
+For local development without Kubernetes, a Compose file is provided.
 
 ```bash
-# 1. On EC2 — install Docker
-sudo apt update && sudo apt install -y docker.io docker-compose-plugin
-sudo usermod -aG docker $USER   # log out & back in
-
-# 2. Copy project to EC2
-scp -r ./k8s_mern_app ec2-user@<EC2_IP>:~/k8s_mern_app
-
-# 3. Set secrets (never commit this file)
-cd ~/k8s_mern_app
+# 1. Setup Environment
 cp .env.example .env
-nano .env   # set JWT_SECRET to a real random value
+# Edit .env and supply:
+# JWT_SECRET=<random_secret_string>
+# GOOGLE_API_KEY=<your_gemini_api_key>
 
-# 4. Start everything
+# 2. Build and run
 docker compose up --build -d
+
+# 3. Access the app
+# Open http://localhost:80 in your browser
+```
+*Note: In Compose mode, the frontend container acts as a static file server, and the browser makes API requests directly to the service ports via the Docker bridge network.*
+
+---
+
+## ☸️ Kubernetes Deployment Guide
+
+All Kubernetes manifests and Helm charts are located in the `k8s/` directory.
+
+### 1. Pre-requisites
+- A running Kubernetes cluster (e.g., kubeadm on EC2).
+- `kubectl` and `helm` installed on your master node.
+- A configured NFS StorageClass (`mongo-nfs-storage`) for MongoDB.
+- Envoy Gateway controller installed in the cluster.
+- Built and pushed Docker images for all services.
+
+### 2. Core Setup
+```bash
+# Create the primary namespace
+kubectl apply -f k8s/namespace.yaml
+
+# Install the Bitnami Sealed Secrets controller
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install sealed-secrets bitnami/sealed-secrets -n kube-system
+
+# Apply your sealed secrets (contains MongoDB passwords and API keys)
+kubectl apply -f k8s/charts/mongo/mongodb-sealed-secret.yaml
 ```
 
-**AWS Security Group** — only these inbound rules needed:
-
-| Port | Source | Purpose |
-|------|--------|---------|
-| 22 | Your IP | SSH |
-| 80 | 0.0.0.0/0 | Frontend (users) |
-
-Access the app at `http://<EC2_PUBLIC_IP>`
-
-## Kubernetes Next Steps
-
+### 3. Deploy Data Stores (Helm)
 ```bash
-# Push images
-docker build -t youruser/fitforge-auth:v1 ./services/auth-service && docker push youruser/fitforge-auth:v1
-# repeat for all services
+# Deploy MongoDB ReplicaSet
+helm install fitforge-mongo bitnami/mongodb -f k8s/charts/mongo/mongodb-values.yaml -n fit-forge
 
-# Bootstrap kubeadm cluster (EC2)
-# Then write K8s YAMLs for:
-# 1. Namespace
-# 2. Secrets + ConfigMaps
-# 3. MongoDB StatefulSet + PV/PVC
-# 4. Redis Deployment
-# 5. All microservice Deployments + ClusterIP Services
-# 6. Frontend Deployment + NodePort Service
+# Deploy Redis
+helm install fitforge-redis ./k8s/charts/redis -n fit-forge
 ```
 
-## Learning Experiments
-
+### 4. Deploy Microservices
+Each service has its own custom Helm chart in `k8s/charts/`.
 ```bash
-# Scale a service
-kubectl scale deployment workout-service --replicas=3 -n fitforge-dev
+helm install auth-service ./k8s/charts/auth-service -n fit-forge
+helm install user-service ./k8s/charts/user-service -n fit-forge
+helm install workout-service ./k8s/charts/workout-service -n fit-forge
+helm install nutrition-service ./k8s/charts/nutrition-service -n fit-forge
+helm install progress-service ./k8s/charts/progress-service -n fit-forge
+helm install ai-agent-service ./k8s/charts/ai-agent-service -n fit-forge
+helm install frontend ./k8s/charts/frontend -n fit-forge
+```
 
-# Simulate pod crash
-kubectl delete pod <pod-name> -n fitforge-dev
+### 5. Configure Routing (Envoy Gateway)
+```bash
+kubectl apply -f k8s/routing/gateway.yaml
+kubectl apply -f k8s/routing/http-routes.yaml
 
-# Watch events
-kubectl get events -n fitforge-dev --sort-by='.lastTimestamp'
+# Find the NodePort assigned to the Envoy Gateway to configure your external HAProxy
+kubectl get svc -n envoy-gateway-system
+```
+
+### 6. Observability Stack (Prometheus / Grafana)
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+kubectl create namespace monitoring
+
+helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -f k8s/observability/prometheus-values.yaml \
+  -n monitoring
 ```
