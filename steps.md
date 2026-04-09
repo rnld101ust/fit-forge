@@ -111,3 +111,4 @@ Run these commands to verify your deployment is healthy:
    *(You should see metric logs being printed out)*
 
 You are done! Your microservices can now connect using the `mongodb.fit-forge.svc.cluster.local` address.
+.
