@@ -3,14 +3,14 @@ name: CI — Auth Service
 on:
   push:
     branches: 
-      - features/ci-ai-agent-services
+      - features/ci-ai-agent-service
     paths:
       - "services/auth-service/**"
       - ".github/workflows/ci-auth-service.yml"
       - ".github/workflows/_ci-template.yml"
   pull_request:
     branches:
-      - features/ci-ai-agent-services
+      - features/ci-ai-agent-service
     paths:
       - "services/auth-service/**"
 
