@@ -122,10 +122,10 @@ jobs:
           retention-days: 14
       
       #SAST
-      - name: Run Sonar Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          projectBaseDir: ${{ inputs.service-path }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "http://44.222.132.231:9000"
+      # - name: Run Sonar Scan
+      #   uses: SonarSource/sonarqube-scan-action@v6
+      #   with:
+      #     projectBaseDir: ${{ inputs.service-path }}
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: "http://44.222.132.231:9000"
