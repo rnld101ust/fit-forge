@@ -21,14 +21,26 @@ on:
         required: false
         type: string
         default: "3.11"
+      environment:
+        required: true
+        type: string
     secrets:
       SNYK_TOKEN:
+        required: true
+      SONAR_TOKEN:
+        required: true
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
         required: true
 
 jobs:
   ci:
     name: "CI — ${{ inputs.service-name }}"
     runs-on: ubuntu-latest
+    concurrency:
+      group: ci-${{ inputs.service-name }}-${{ inputs.environment }}
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: ${{ inputs.service-path }}
@@ -37,6 +49,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         if: inputs.runtime == 'node'
@@ -129,3 +143,73 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: "http://44.222.132.231:9000"
+
+      - name: Calculate Semantic Version (Main Only)
+        id: semver
+        if: inputs.environment == 'main'
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ github.token }}
+          tag_prefix: ${{ inputs.service-name }}-v
+          dry_run: true 
+          default_bump: patch
+
+      - name: Generate Tag
+        id: tag
+        run: |
+          if [ "${{ inputs.environment }}" = "develop" ]; then
+            echo "tag=dev-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ steps.semver.outputs.new_tag }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate existing tag
+        id: tag_check
+        run: |
+          TAG=${{ steps.tag.outputs.tag }}
+          
+          # Force fetch remote tags to ensure the local index knows about them
+          git fetch --tags origin || true
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            TAG_COMMIT=$(git rev-list -n 1 "$TAG")
+            CURRENT_COMMIT=$(git rev-parse HEAD)
+
+            if [ "$TAG_COMMIT" != "$CURRENT_COMMIT" ]; then
+              echo "Tag exists but points to different commit!"
+              exit 1
+            fi
+
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Check Docker image
+        id: image_check
+        run: |
+          if docker manifest inspect ${{ secrets.DOCKER_USERNAME }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build & Push Docker Image
+        if: steps.image_check.outputs.exists != 'true'
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }} .
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }}
+
+      # CREATE TAG (ONLY IF NOT EXISTS)
+      - name: Create Git Tag
+        if: inputs.environment == 'main' && steps.tag_check.outputs.exists != 'true'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git tag ${{ steps.tag.outputs.tag }}
+          git push origin ${{ steps.tag.outputs.tag }}
