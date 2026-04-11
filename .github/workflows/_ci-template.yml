@@ -105,7 +105,8 @@ jobs:
       - name: Build Docker Image
         run: docker build \
                -t fitforge360/${{ inputs.service-name }}:${{ github.sha }} \
-               -t fitforge360/${{ inputs.service-name }}:latest .
+               -t fitforge360/${{ inputs.service-name }}:latest \
+               .
           
       - name: Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
@@ -131,4 +132,3 @@ jobs:
         run: |
           docker push fitforge360/${{ inputs.service-name }}:${{ github.sha }}
           docker push fitforge360/${{ inputs.service-name }}:latest
-          
