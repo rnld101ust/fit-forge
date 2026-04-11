@@ -11,6 +11,7 @@ on:
       - "services/nutrition-service/**"
 
 
+
 jobs:
   ci:
     uses: ./.github/workflows/_ci-template.yml
@@ -18,6 +19,4 @@ jobs:
       service-name: nutrition-service
       service-path: ./services/nutrition-service
       runtime: node
-    secrets:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    secrets: inherit
