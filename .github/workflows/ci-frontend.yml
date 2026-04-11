@@ -1,12 +1,9 @@
 name: Frontend CI + Docker
-
 on:
   push:
     branches:
       - feature/frontend-login-resources   # runs after merge
-
 jobs:
-
   # 🔹 Step 1: Run CI template (NO SONAR)
   ci:
     uses: ./.github/workflows/_ci-template.yml
@@ -17,7 +14,6 @@ jobs:
       node-version: "20"
     secrets:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
   # 🔹 Step 2: Docker Build & Push
   docker:
     name: Docker Build & Push
