@@ -95,7 +95,8 @@ jobs:
           name: snyk-report-${{ inputs.service-name }}
           path: ${{ inputs.service-path }}/snyk-report.json
           retention-days: 14
-
+      
+      #SAST
       - name: Run Sonar Scan
         uses: SonarSource/sonarqube-scan-action@v6
         with:
