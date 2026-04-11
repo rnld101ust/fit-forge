@@ -95,3 +95,11 @@ jobs:
           name: snyk-report-${{ inputs.service-name }}
           path: ${{ inputs.service-path }}/snyk-report.json
           retention-days: 14
+
+      - name: Run Sonar Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          projectBaseDir: ${{ inputs.service-path }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: "http://44.222.132.231:9000"
