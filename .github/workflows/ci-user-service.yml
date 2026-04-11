@@ -1,9 +1,9 @@
 name: CI-USER-SERVICE
 
 on:
-  pull_requests:
+  pull_request:
     branches:
-      feature/ci-user-service
+      - feature/ci-user-service
   push:
     branches:
       - feature/ci-user-service
@@ -13,7 +13,7 @@ on:
 
 jobs:
   ci:
-    uses: ".github/workflows/_ci-template.yml"
+    uses: ./.github/workflows/_ci-template.yml
     with:
       service-name: user-service
       service-path: services/user-service
