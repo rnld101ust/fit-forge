@@ -126,6 +126,9 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6
         with:
           projectBaseDir: ${{ inputs.service-path }}
+          args: >
+            -Dsonar.projectKey=fitforge-frontend
+            -Dsonar.projectName=fitforge-frontend
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: "http://18.205.104.55:9000" 
