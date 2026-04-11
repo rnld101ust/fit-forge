@@ -128,4 +128,4 @@ jobs:
           projectBaseDir: ${{ inputs.service-path }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "http://18.205.104.55:9000"
+          SONAR_HOST_URL: "http://18.205.104.55:9000" 
