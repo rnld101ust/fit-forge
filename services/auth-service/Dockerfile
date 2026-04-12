@@ -1,12 +1,20 @@
-FROM node:18-alpine
+FROM node:20-slim
 
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+# Run as a non-root user for improved security
+USER node
+
+# Set the working directory
 WORKDIR /app
 
-# Copy lockfile alongside package.json so npm ci can install exact versions
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# Set environment to production
+ENV NODE_ENV=production
 
-COPY src/ ./src/
+COPY --chown=node:node package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --chown=node:node src/ ./src/
 
 EXPOSE 5001
 
