@@ -16,6 +16,8 @@ on:
       - main
     paths:
       - "services/auth-service/**"
+      - ".github/workflows/ci-auth-service.yml"
+      - ".github/workflows/_ci-template.yml"
 
 jobs:
   ci:

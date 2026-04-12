@@ -35,18 +35,18 @@ on:
         required: true
 
 jobs:
-  ci:
-    name: "CI — ${{ inputs.service-name }}"
+  code-quality:
+    name: "Code Quality - ${{ inputs.service-name }}"
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     concurrency:
-      group: ci-${{ inputs.service-name }}-${{ inputs.environment }}
+      group: code-quality-${{ inputs.service-name }}-${{ inputs.environment }}
       cancel-in-progress: false
     defaults:
       run:
         working-directory: ${{ inputs.service-path }}
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -79,25 +79,13 @@ jobs:
         if: inputs.runtime == 'python'
         run: pip install -r requirements.txt
 
-      # - name: Debug — Show current directory
-      #   run: |
-      #     echo "Current directory:"
-      #     pwd
-
-      # - name: Debug — List files
-      #   run: |
-      #     echo "Listing files:"
-      #     ls -la
-
-      # || true = report-only mode (won't fail the pipeline).
-      # Remove || true when you're ready to enforce blocking on HIGH/CRITICAL.
       - name: Setup Snyk CLI
         uses: snyk/actions/setup@master
 
       - name: Install snyk-to-html
         run: npm install -g snyk-to-html
 
-      - name: Snyk — Scan dependencies (Node)
+      - name: Snyk - Scan dependencies (Node)
         if: inputs.runtime == 'node'
         run: snyk test --severity-threshold=high --json-file-output=snyk-report.json || true
         env:
@@ -107,7 +95,7 @@ jobs:
         if: inputs.runtime == 'node'
         run: snyk-to-html -i snyk-report.json -o snyk-report.html
 
-      - name: Snyk — Scan dependencies (Python)
+      - name: Snyk - Scan dependencies (Python)
         if: inputs.runtime == 'python'
         run: snyk test --file=requirements.txt --package-manager=pip --severity-threshold=high --json-file-output=snyk-report.json || true
         env:
@@ -117,14 +105,6 @@ jobs:
         if: inputs.runtime == 'python'
         run: snyk-to-html -i snyk-report.json -o snyk-report.html
 
-      # - name: Upload Snyk report
-      #   uses: actions/upload-artifact@v4
-      #   if: always()
-      #   with:
-      #     name: snyk-report-${{ inputs.service-name }}
-      #     path: ${{ inputs.service-path }}/snyk-report.json
-      #     retention-days: 14
-
       - name: Upload Snyk HTML report
         uses: actions/upload-artifact@v4
         if: always()
@@ -132,17 +112,25 @@ jobs:
           name: snyk-report-${{ inputs.service-name }}
           path: ${{ inputs.service-path }}/snyk-report.html
           retention-days: 14
-      
-      # #SAST
-      # - name: Run Sonar Scan
-      #   uses: SonarSource/sonarqube-scan-action@v6
-      #   with:
-      #     projectBaseDir: ${{ inputs.service-path }}
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: "http://44.222.132.231:9000"
 
+  build-publish:
+    name: "Build & Publish - ${{ inputs.service-name }}"
+    runs-on: ubuntu-latest
+    needs: [code-quality]
+    if: always() && needs.code-quality.result != 'failure' && needs.code-quality.result != 'cancelled'
+    concurrency:
+      group: build-publish-${{ inputs.service-name }}-${{ inputs.environment }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ inputs.service-path }}
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
       - name: Calculate Semantic Version (Main Only)
         id: semver
         if: inputs.environment == 'main'
@@ -197,11 +185,13 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         if: steps.image_check.outputs.exists != 'true'
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME_P }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }} .
-          docker push ${{ secrets.DOCKER_USERNAME_P }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }}
+        run: docker build -t ${{ secrets.DOCKER_USERNAME_P }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }} .
+
+      - name: Push Docker Image
+        if: steps.image_check.outputs.exists != 'true' && github.event_name != 'pull_request'
+        run: docker push ${{ secrets.DOCKER_USERNAME_P }}/${{ inputs.service-name }}:${{ steps.tag.outputs.tag }}
 
       # CREATE TAG (ONLY IF NOT EXISTS)
       - name: Create Git Tag
