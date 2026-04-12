@@ -128,4 +128,8 @@ jobs:
         if: success()
         run: |
           docker push fitforge360/${{ inputs.service-name }}:${{ github.sha }}
-          docker push fitforge360/${{ inputs.service-name }}:latest
+
+
+
+
+# docker push fitforge360/${{ inputs.service-name }}:latest
