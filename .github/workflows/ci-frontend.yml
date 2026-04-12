@@ -3,7 +3,7 @@ name: CI — Frontend
 on:
   push:
     branches:
-      - feature/frontend-login-resources
+      - feature/ci-frontend
     paths:
       - "frontend/**"
       - ".github/workflows/ci-frontend.yml"
@@ -11,7 +11,8 @@ on:
 
   pull_request:
     branches:
-      - main-features
+      - develop
+      - main
     paths:
       - "frontend/**"
 
