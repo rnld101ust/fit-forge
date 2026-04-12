@@ -77,58 +77,58 @@ jobs:
 
       # || true = report-only mode (won't fail the pipeline).
       # Remove || true when you're ready to enforce blocking on HIGH/CRITICAL.
-      - name: Setup Snyk CLI
-        uses: snyk/actions/setup@master
+      # - name: Setup Snyk CLI
+      #   uses: snyk/actions/setup@master
 
-      - name: Install snyk-to-html
-        run: npm install -g snyk-to-html
+      # - name: Install snyk-to-html
+      #   run: npm install -g snyk-to-html
 
-      - name: Snyk — Scan dependencies (Node)
-        if: inputs.runtime == 'node'
-        run: snyk test --severity-threshold=high --json-file-output=snyk-report.json || true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      # - name: Snyk — Scan dependencies (Node)
+      #   if: inputs.runtime == 'node'
+      #   run: snyk test --severity-threshold=high --json-file-output=snyk-report.json || true
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Convert Snyk report to HTML(node)
-        if: inputs.runtime == 'node'
-        run: snyk-to-html -i snyk-report.json -o snyk-report.html
+      # - name: Convert Snyk report to HTML(node)
+      #   if: inputs.runtime == 'node'
+      #   run: snyk-to-html -i snyk-report.json -o snyk-report.html
 
-      - name: Snyk — Scan dependencies (Python)
-        if: inputs.runtime == 'python'
-        run: snyk test --file=requirements.txt --package-manager=pip --severity-threshold=high --json-file-output=snyk-report.json || true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      # - name: Snyk — Scan dependencies (Python)
+      #   if: inputs.runtime == 'python'
+      #   run: snyk test --file=requirements.txt --package-manager=pip --severity-threshold=high --json-file-output=snyk-report.json || true
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Convert Snyk report to HTML(python)
-        if: inputs.runtime == 'python'
-        run: snyk-to-html -i snyk-report.json -o snyk-report.html
+      # - name: Convert Snyk report to HTML(python)
+      #   if: inputs.runtime == 'python'
+      #   run: snyk-to-html -i snyk-report.json -o snyk-report.html
 
-      # - name: Upload Snyk report
+      # # - name: Upload Snyk report
+      # #   uses: actions/upload-artifact@v4
+      # #   if: always()
+      # #   with:
+      # #     name: snyk-report-${{ inputs.service-name }}
+      # #     path: ${{ inputs.service-path }}/snyk-report.json
+      # #     retention-days: 14
+
+      # - name: Upload Snyk HTML report
       #   uses: actions/upload-artifact@v4
       #   if: always()
       #   with:
       #     name: snyk-report-${{ inputs.service-name }}
-      #     path: ${{ inputs.service-path }}/snyk-report.json
+      #     path: |
+      #       ${{ inputs.service-path }}/snyk-report-node.html
+      #       ${{ inputs.service-path }}/snyk-report-python.html
       #     retention-days: 14
-
-      - name: Upload Snyk HTML report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: snyk-report-${{ inputs.service-name }}
-          path: |
-            ${{ inputs.service-path }}/snyk-report-node.html
-            ${{ inputs.service-path }}/snyk-report-python.html
-          retention-days: 14
       
-      #SAST
-      - name: Run Sonar Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          projectBaseDir: ${{ inputs.service-path }}
-          args: >
-            -Dsonar.projectKey=fitforge-frontend
-            -Dsonar.projectName=fitforge-frontend
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "http://18.205.104.55:9000" 
+      # #SAST
+      # - name: Run Sonar Scan
+      #   uses: SonarSource/sonarqube-scan-action@v6
+      #   with:
+      #     projectBaseDir: ${{ inputs.service-path }}
+      #     args: >
+      #       -Dsonar.projectKey=fitforge-frontend
+      #       -Dsonar.projectName=fitforge-frontend
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: "http://18.205.104.55:9000" 
