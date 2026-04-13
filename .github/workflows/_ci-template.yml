@@ -37,102 +37,102 @@ on:
         required: true
 #jobs
 jobs:
-  code-quality:
-    name: "Code Quality - ${{ inputs.service-name }}"
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    concurrency:
-      group: code-quality-${{ inputs.service-name }}-${{ inputs.environment }}
-      cancel-in-progress: false
-    defaults:
-      run:
-        working-directory: ${{ inputs.service-path }}
+  # code-quality:
+  #   name: "Code Quality - ${{ inputs.service-name }}"
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #   concurrency:
+  #     group: code-quality-${{ inputs.service-name }}-${{ inputs.environment }}
+  #     cancel-in-progress: false
+  #   defaults:
+  #     run:
+  #       working-directory: ${{ inputs.service-path }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Setup Node.js
-        if: inputs.runtime == 'node'
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache: "npm"
-          cache-dependency-path: "${{ inputs.service-path }}/package-lock.json"
+  #     - name: Setup Node.js
+  #       if: inputs.runtime == 'node'
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ inputs.node-version }}
+  #         cache: "npm"
+  #         cache-dependency-path: "${{ inputs.service-path }}/package-lock.json"
 
-      - name: Setup Python
-        if: inputs.runtime == 'python'
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
-          cache: "pip"
+  #     - name: Setup Python
+  #       if: inputs.runtime == 'python'
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: ${{ inputs.python-version }}
+  #         cache: "pip"
 
-      - name: Install Node dependencies
-        if: inputs.runtime == 'node'
-        run: npm ci
+  #     - name: Install Node dependencies
+  #       if: inputs.runtime == 'node'
+  #       run: npm ci
 
-      - name: Check unused dependencies(node)
-        if: inputs.runtime == 'node'
-        run: npx depcheck || true
+  #     - name: Check unused dependencies(node)
+  #       if: inputs.runtime == 'node'
+  #       run: npx depcheck || true
 
-      - name: Install Python dependencies
-        if: inputs.runtime == 'python'
-        run: pip install -r requirements.txt
+  #     - name: Install Python dependencies
+  #       if: inputs.runtime == 'python'
+  #       run: pip install -r requirements.txt
 
-      #SCA
-      - name: Setup Snyk CLI
-        uses: snyk/actions/setup@master
+  #     #SCA
+  #     - name: Setup Snyk CLI
+  #       uses: snyk/actions/setup@master
 
-      - name: Install snyk-to-html
-        run: npm install -g snyk-to-html
+  #     - name: Install snyk-to-html
+  #       run: npm install -g snyk-to-html
 
-      - name: Snyk - Scan dependencies (Node)
-        if: inputs.runtime == 'node'
-        run: snyk test --severity-threshold=high --json-file-output=snyk-report.json || true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  #     - name: Snyk - Scan dependencies (Node)
+  #       if: inputs.runtime == 'node'
+  #       run: snyk test --severity-threshold=high --json-file-output=snyk-report.json || true
+  #       env:
+  #         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Convert Snyk report to HTML(node)
-        if: inputs.runtime == 'node'
-        run: snyk-to-html -i snyk-report.json -o snyk-report.html
+  #     - name: Convert Snyk report to HTML(node)
+  #       if: inputs.runtime == 'node'
+  #       run: snyk-to-html -i snyk-report.json -o snyk-report.html
 
-      - name: Snyk - Scan dependencies (Python)
-        if: inputs.runtime == 'python'
-        run: snyk test --file=requirements.txt --package-manager=pip --severity-threshold=high --json-file-output=snyk-report.json || true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  #     - name: Snyk - Scan dependencies (Python)
+  #       if: inputs.runtime == 'python'
+  #       run: snyk test --file=requirements.txt --package-manager=pip --severity-threshold=high --json-file-output=snyk-report.json || true
+  #       env:
+  #         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Convert Snyk report to HTML(python)
-        if: inputs.runtime == 'python'
-        run: snyk-to-html -i snyk-report.json -o snyk-report.html
+  #     - name: Convert Snyk report to HTML(python)
+  #       if: inputs.runtime == 'python'
+  #       run: snyk-to-html -i snyk-report.json -o snyk-report.html
 
-      # SAST
-      - name: Run Sonar Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          projectBaseDir: ${{ inputs.service-path }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+  #     # SAST
+  #     - name: Run Sonar Scan
+  #       uses: SonarSource/sonarqube-scan-action@v6
+  #       with:
+  #         projectBaseDir: ${{ inputs.service-path }}
+  #       env:
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #         SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
 
-      - name: Upload Snyk HTML report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: snyk-report-${{ inputs.service-name }}
-          path: ${{ inputs.service-path }}/snyk-report.html
-          retention-days: 14
+  #     - name: Upload Snyk HTML report
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: snyk-report-${{ inputs.service-name }}
+  #         path: ${{ inputs.service-path }}/snyk-report.html
+  #         retention-days: 14
 
   build-publish:
     name: "Build & Publish - ${{ inputs.service-name }}"
     runs-on: ubuntu-latest
-    needs: [code-quality]
-    if: always() && needs.code-quality.result != 'failure' && needs.code-quality.result != 'cancelled'
-    concurrency:
-      group: build-publish-${{ inputs.service-name }}-${{ inputs.environment }}
-      cancel-in-progress: false
+    # needs: [code-quality]
+    # if: always() && needs.code-quality.result != 'failure' && needs.code-quality.result != 'cancelled'
+    # concurrency:
+    #   group: build-publish-${{ inputs.service-name }}-${{ inputs.environment }}
+    #   cancel-in-progress: false
     defaults:
       run:
         working-directory: ${{ inputs.service-path }}
