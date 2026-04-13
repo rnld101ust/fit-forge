@@ -25,12 +25,12 @@ on:
         required: true
         type: string
     secrets:
-      SNYK_TOKEN:
-        required: true
-      SONAR_TOKEN:
-        required: true
-      SONAR_URL:
-        required: true
+      # SNYK_TOKEN:
+      #   required: true
+      # SONAR_TOKEN:
+      #   required: true
+      # SONAR_URL:
+      #   required: true
       DOCKER_USERNAME:
         required: true
       DOCKER_PASSWORD:
