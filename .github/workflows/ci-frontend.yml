@@ -12,6 +12,7 @@ on:
   pull_request:
     branches:
       - develop
+      - main
     paths:
       - "frontend/**"
 
@@ -25,5 +26,5 @@ jobs:
       service-path: frontend
       runtime: node
       node-version: "20"
-      environment: dev   
+      environment: main 
     secrets: inherit
