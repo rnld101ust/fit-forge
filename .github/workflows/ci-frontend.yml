@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/ci-frontend
+      - main
     paths:
       - "frontend/**"
       - ".github/workflows/ci-frontend.yml"
